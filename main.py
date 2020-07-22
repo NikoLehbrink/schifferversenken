@@ -1,7 +1,7 @@
 class Gameboard(object):
-  def __init__(self, board_width, board_height, battleships):
-    self.board_wdith = board_width
-    self.board_height = board_height
+  def __init__(self, width, height, battleships):
+    self.width = width
+    self.height = height
     self.battleships = battleships
     self.shots = []
 # Todo: update battleship with any hits
@@ -17,6 +17,13 @@ class Gameboard(object):
           break
     
     self.shots.append(Shot(shot_location, is_hit))
+
+  def is_game_over(self):
+    for b in self.battleships:
+      if not b.is_destroyed():
+        return False
+    return True
+
 
 class Shot(object):
   def __init__(self, location, is_hit):
@@ -40,7 +47,6 @@ class Battleship(object):
       elif direction == "E":
         element = (head[0] + i, head[1])
 
-      
       body.append(element)
     return Battleship(body)
 
@@ -53,100 +59,87 @@ class Battleship(object):
       return self.body.index(location)
     except ValueError:
       return None
+  
+  def is_destroyed(self):
+    for ht in self.hits:
+      if(ht == False):
+        return False
+    return True
 
 
-# Print-Funktion für das Spielbrett
-def render(board_width, board_height, shots):
-  field_border_top_bottom = "+" + "-" * board_width + "+"
+
+
+def render(game_board, show_battleships=False):
+  field_border_top_bottom = "+" + "-" * game_board.width + "+"
   print(field_border_top_bottom)
 
-# Aus Performancegründen machen wir ein Set raus
-  shots_set = set(shots)
+  board = []
+  for x in range(game_board.width):
+    board.append([None for y in range(game_board.height)])
 
-  for y in range(board_height):
+  if(show_battleships):
+    # add the battleships to the board
+    for b in game_board.battleships:
+      for x,y in b.body:
+        board[x][y] = "0"
+
+  # Add shots to the board
+  for sh in game_board.shots:
+    x, y = sh.location
+    if sh.is_hit:
+      character = "X"
+    else:
+      character = "."
+    board[x][y] = character
+
+  for y in range(game_board.height):
     row = []
-    for x in range(board_width):
-      if (x,y) in shots_set:
-        character = "X"
-      else:
-        character = " "
-      row.append(character)
-    print("|" + "".join(row) + "|", end=" ")
-    print(row)
-    # print("|" + " " * board_width + "|")
+    for x in range(game_board.width):
+      row.append(board[x][y] or " ")
+    print("|" + "".join(row) + "|")
 
   print(field_border_top_bottom)
 
-def render_battleships(board_width, board_height, battleships):
-  field_border_top_bottom = "+" + "-" * board_width + "+"
+def render_battleships(width, height, battleships):
+  field_border_top_bottom = "+" + "-" * width + "+"
   print(field_border_top_bottom)
 
   # construct empty board
   board = []
-  for x in range(board_width):
-    # Python spezifisches List-Comprehension, Alternative für:    
-    # row = []
-    # for y in range(board_height):
-    #   row.append(None)
-    # board.append (row)
-    board.append([None for y in range(board_height)])
+  for x in range(width):
+    board.append([None for y in range(height)])
 
   # add the battleships to the board
   for b in battleships:
     for x,y in b.body:
       board[x][y] = "0"
 
-  for y in range(board_height):
+  for y in range(height):
     row = []
-    for x in range(board_width):
+    for x in range(width):
       row.append(board[x][y] or " ")
     print("|" + "".join(row) + "|")
 
   print(field_border_top_bottom)
 
-
-
-
 if __name__=="__main__":
   battleships = [
     Battleship.build((1,2), 2, "S"),
-    Battleship.build((3,4), 4, "W"),
-    Battleship.build((5,7), 3, "E")
+    # Battleship.build((3,4), 4, "W"),
+    # Battleship.build((5,7), 3, "E")
   ]
 
   game_board = Gameboard(10,10,battleships)
-  shots = [(1,1),(0,0), (5,7)]
-
-  for sh in shots:
-    game_board.take_shot(sh)
-
-  for sh in game_board.shots:
-    print(sh.location)
-    print(sh.is_hit)
-    print("======")
-  for b in game_board.battleships:
-    print(b.body)
-    print(b.hits)
-    print("======")
-  
-  exit(0)
-
-
-
-
-  print(game_board.shots)
-  print(game_board.battleships)
-  render_battleships(10,10, battleships)
-
-
-
-  shots = []
 
   while(True):
     # ToDo: Bad user input
     inp = input("Wo willst du hinschiessen?\n")
-    x_str, y_str =inp.split(",")
+    x_str, y_str = inp.split(",")
     x = int(x_str)
     y = int(y_str)
-    shots.append((x,y))
-    render(10,10, shots)
+    game_board.take_shot((x,y))
+    render(game_board)
+
+    if game_board.is_game_over():
+      print("You Win")
+      break
