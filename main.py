@@ -1,85 +1,10 @@
 import copy
 import random
+import time
+from Battleship import Battleship
+from Gameboard import Gameboard
+from Player import Player
 
-class Gameboard(object):
-  def __init__(self, width, height, battleships):
-    self.width = width
-    self.height = height
-    self.battleships = battleships
-    self.shots = []
-# Todo: update battleship with any hits
-# Todo: save the fact that the shot was a hit or a miss
-  def take_shot(self, shot_location):
-    is_hit = False
-    for b in self.battleships:
-        index = b.body_index(shot_location)
-        if index is not None:
-          is_hit = True
-          b.hits[index] = True
-          # Breakt raus, weil wir wissne welches Schiff getroffen wurde
-          break
-    
-    self.shots.append(Shot(shot_location, is_hit))
-    return is_hit
-
-  def is_game_over(self):
-    for b in self.battleships:
-      if not b.is_destroyed():
-        return False
-    return True
-
-
-class Shot(object):
-  def __init__(self, location, is_hit):
-    self.location = location
-    self.is_hit = is_hit
-
-class Battleship(object):
-
-  @staticmethod
-  def build(head, length, direction):
-    body = []
-    for i in range(length):
-      # Wenn direction Nord ist, bleib die x-Koordinate gleich, aber die y-Koordinate ändert sich um die Anzahl der Länge
-      if direction == "N":
-        # head[0] ist x-Koordinate des Schiffbeginns, welcher der User festlegt, head[1] ist die y-koordinate
-        element = (head[0], head[1] - i)
-      elif direction == "S":
-        element = (head[0], head[1] + i)
-      elif direction == "W":
-        element = (head[0] - i, head[1])
-      elif direction == "E":
-        element = (head[0] + i, head[1])
-
-      body.append(element)
-    return Battleship(body, head, length, direction)
-
-
-# Todo: which of this params do we actually need?
-  def __init__(self, body, head, length, direction):
-    self.body = body
-    self.head = head
-    self.length = length
-    self.direction = direction
-    self.hits = [False] * len(body)
-
-  def body_index(self, location):
-    try:
-      return self.body.index(location)
-    except ValueError:
-      return None
-  
-  def is_destroyed(self):
-    for ht in self.hits:
-      if(ht == False):
-        return False
-    return True
-
-class Player(object):
-
-  def __init__(self, name, shot_function):
-    self.name = name
-    self.shot_function = shot_function
 
 def render(game_board, show_battleships=False):
   field_border_top_bottom = "+" + "-" * game_board.width + "+"
@@ -129,10 +54,31 @@ def render(game_board, show_battleships=False):
   print(field_border_top_bottom)
 
 
+# event is type, metadata(player,...)
+def announce(event_type, metadata={}):
+  if event_type == "win":
+    print("%s gewinnt! Glückwunsch! " % metadata["player"])
+  elif event_type == "new_turn":
+    print("%s ist am Zug!" % metadata["player"])
+  elif event_type == "hit":
+    print("Wow, %s hat ein Schiff getroffen!" % metadata["player"])
+  elif event_type == "destroyed":
+    print("BOOOM, %s hat das Schiff versenkt!" % metadata["player"])
+  elif event_type == "miss":
+    print("Leider nicht getroffen, %s!" % metadata["player"])
+
+
+
 def get_random_ai_shot(game_board):
   x = random.randint(0, game_board.width - 1 )
   y = random.randint(0, game_board.height - 1)
   return (x,y)
+
+def random_sleepy_ai(sleep_time):
+  def function(game_board):
+    time.sleep(sleep_time)
+    return get_random_ai_shot(game_board)
+  return function
 
 def get_human_shot(game_board):
   inp = input("Wo willst du hinschiessen?\n")
@@ -141,22 +87,71 @@ def get_human_shot(game_board):
   y = int(y_str)
   return (x,y)
 
-if __name__=="__main__":
+
+def create_random_battleships():
+  ship_member = 2
+  first_three_long_ship = False
+  random_battleships = []
+
+  for i in range(0,5):
+    directionList = ["N","E","S","W"]
+    # convert to set for intersection method
+    directionSet = set(directionList)
+
+    x = random.randint(0, 9)
+    y = random.randint(0, 9)
+    print("X = %s" %x)
+    print("Y = %s" %y)
+
+
+    if (x + ship_member > 9):
+      directionSet = directionSet.intersection(["N","S","W"])
+      print("No east")
+    if (x - ship_member < 0):
+      directionSet = directionSet.intersection(["N","E","S"])
+      print("No west")
+    if (y + ship_member > 9):
+      directionSet = directionSet.intersection(["N","E","W"])
+
+      print("No south")
+    if (y - ship_member < 0):
+      directionSet = directionSet.intersection(["W","E","S"])
+      print("No North")
+    print(directionSet)
+
+    # convert back to list for random choice method
+    direction = random.choice(list(directionSet))
+    new_battleship = Battleship.build((x,y), ship_member, direction)
+    random_battleships.append(new_battleship)
+    if i == 1 and not first_three_long_ship:
+      first_three_long_ship = True
+    else:
+      ship_member += 1
+
+    print(random_battleships[i].body)
+  return random_battleships
+    
+
+
+
+
+
+def run():
 
   battleships = [
     Battleship.build((1,0), 3, "S"),
-    Battleship.build((3,4), 4, "N"),
-    Battleship.build((5,7), 3, "E")
+    Battleship.build((3,4), 4, "N")
+    # Battleship.build((5,7), 3, "E")
   ]
 
   game_boards = [
-    Gameboard(10,10,battleships),  
-    Gameboard( 10,10,copy.deepcopy(battleships))  
+    Gameboard(10,10,create_random_battleships()),  
+    Gameboard(10,10,copy.deepcopy(battleships))  
   ]
 
   players = [
-    Player("Rob", get_human_shot),
-    Player("Niko", get_random_ai_shot)
+    Player("Rob", random_sleepy_ai(2.5)),
+    Player("Niko", random_sleepy_ai(2.5))
   ]
   offensive_index = 0
 
@@ -167,16 +162,33 @@ if __name__=="__main__":
     defensive_board = game_boards[defensive_index]
     offensive_player = players[offensive_index]
 
-    print("%s Yoour Turn!" % offensive_player.name)
+    # print("%s Yoour Turn!" % offensive_player.name)
+    announce("new_turn", {"player": offensive_player.name})
+
 
     shot_location = offensive_player.shot_function(defensive_board)
     # ToDo: Bad user input
 
-    x = defensive_board.take_shot(shot_location)
+    hit_battleship = defensive_board.take_shot(shot_location)
+
+
     render(defensive_board, True)
 
     if defensive_board.is_game_over():
-      print("%s You Win" % offensive_player.name)
+      announce("win", {"player": offensive_player.name})
+      # print("%s You Win" % offensive_player.name)
       break
-    if x == False:
+    
+    if hit_battleship is None:
+      announce("miss", {"player": offensive_player.name})
       offensive_index = defensive_index
+    else:
+      if hit_battleship.is_destroyed():
+        announce("destroyed", {"player": offensive_player.name})
+      else:
+        announce("hit", {"player": offensive_player.name})
+
+
+if __name__=="__main__":
+  run()
+
