@@ -53,7 +53,6 @@ def render(game_board, show_battleships=False):
 
   print(field_border_top_bottom)
 
-
 # event is type, metadata(player,...)
 def announce(event_type, metadata={}):
   if event_type == "win":
@@ -66,8 +65,18 @@ def announce(event_type, metadata={}):
     print("BOOOM, %s hat das Schiff versenkt!" % metadata["player"])
   elif event_type == "miss":
     print("Leider nicht getroffen, %s!" % metadata["player"])
-
-
+  elif event_type == "wrong_number":
+    print("Bitte eine gültige Zahl zwischen 0 und 9 eingeben")
+  elif event_type == "wrong_direction":
+    print("Invalide Himmelsrichtung!")
+  elif event_type == "ship_already_exists":
+    print("An dieser Stelle gibt es schon ein Schiff.")
+    print("Platziere das Schiff erneut!")
+  elif event_type == "out_of_border":
+    print("Außerhalb des Wassers dürfen keine Schiffe platziert werden.")
+    print("Richtung: %s" % metadata["direction"])
+  elif event_type == "collision":
+    print("Kollision von {0} mit {1}.".format(metadata["coordinates"], metadata["already_build_battleships"]))
 
 def get_random_ai_shot(game_board):
   x = random.randint(0, game_board.width - 1 )
@@ -87,61 +96,162 @@ def get_human_shot(game_board):
   y = int(y_str)
   return (x,y)
 
+def is_collision_with_battleship(random_battleships, new_battleship):
+  for already_build_battleship in random_battleships:
+    for coordinates in already_build_battleship.body:
+      # print("Koordinaten: %s" %coordinates)
+      # print("Neues Schiff: %s" %new_battleship.body)
+      if coordinates in new_battleship.body:
+        announce("collision", {"coordinates": coordinates,"already_build_battleships": already_build_battleship.body})
+        return True
+  return False
+
+def is_collision_with_coordinates(random_battleships, coords):
+  for already_build_battleship in random_battleships:
+    for coordinates in already_build_battleship.body:
+      print("Koordinaten: {0}".format(coordinates))
+      print("Neues Schiff: {0}".format(coords))
+      if coordinates == coords:
+        announce("collision", {"coordinates": coords,"already_build_battleships": already_build_battleship.body})
+        return True
+  return False
+
+
+
+
+def create_own_battleships():
+  ship_length = 2
+  first_three_long_ship = False
+  battleships = []
+  prevBattleships = []
+  directionList = ['N','E','S','W']
+
+  while(ship_length <= 5):
+    while(True):
+      try:
+        x = int(input("In welcher Spalte soll das Schiff platziert werden?\n"))
+        if not(0 <= x <= 9):
+          announce("wrong_number")
+          continue
+        y = int(input("In welcher Zeile soll das Schiff platziert werden?\n"))
+        if not(0 <= y <= 9):
+          announce("wrong_number")
+          continue
+        coords = (x,y)
+        if is_collision_with_coordinates(battleships, coords):
+          announce("ship_already_exists")
+        else:
+          break
+      except ValueError:
+        announce("wrong_number")
+      
+    while(True):
+      print("In welche Himmelsrichtung soll dein Schiff zeigen?")
+      direction = input("Eingabe: 'N','E', 'S', 'W'\n").upper()
+
+      if not direction in directionList:
+        announce("wrong_direction")
+        continue
+
+      if not is_collision_with_coordinates(battleships, coords):
+        print("hallo")
+        if (x + ship_length - 1 > 9 and direction == 'E'):
+          announce("out_of_border", {"direction": direction})
+          continue
+        if (x - ship_length + 1 < 0 and direction == 'W'):
+          print(x - ship_length)
+          announce("out_of_border", {"direction": direction})
+          continue
+        if (y + ship_length - 1 > 9 and direction == 'S'):
+          announce("out_of_border", {"direction": direction})
+          continue
+        if (y - ship_length + 1 < 0 and direction == 'N'):
+          announce("out_of_border", {"direction": direction})
+          continue
+
+        new_battleship = Battleship.build((x,y), ship_length, direction)
+
+        if is_collision_with_battleship(battleships, new_battleship):
+          announce("ship_already_exists")
+          break
+        else:
+          battleships.append(new_battleship)
+
+        if ship_length == 3 and not first_three_long_ship:
+          first_three_long_ship = True
+        else:
+          ship_length += 1
+        break
+      else:
+        print("Neuer Versuch")
+        break
+    
+    for r in battleships:
+      print("Alle Schiffe: %s" %r.body)
+
+  return battleships
+  
+
 
 def create_random_battleships():
-  ship_member = 2
+  ship_length = 2
   first_three_long_ship = False
   random_battleships = []
+  prevBattleships = []
 
-  for i in range(0,5):
+  while(ship_length <= 5):
     directionList = ["N","E","S","W"]
     # convert to set for intersection method
     directionSet = set(directionList)
 
     x = random.randint(0, 9)
     y = random.randint(0, 9)
-    print("X = %s" %x)
-    print("Y = %s" %y)
+    coords = (x,y)
+    print("x = {0}, y = {1}".format(x,y))
 
+    if not is_collision_with_coordinates(random_battleships, coords):
+      print("{0} nocht nicht vorhanden!".format(coords))
+      print("Vorherige Schiffe: {0}".format(prevBattleships))
 
-    if (x + ship_member > 9):
-      directionSet = directionSet.intersection(["N","S","W"])
-      print("No east")
-    if (x - ship_member < 0):
-      directionSet = directionSet.intersection(["N","E","S"])
-      print("No west")
-    if (y + ship_member > 9):
-      directionSet = directionSet.intersection(["N","E","W"])
+      if (x + ship_length > 9):
+        directionSet = directionSet.intersection(["N","S","W"])
+        # print("No east")
+      if (x - ship_length < 0):
+        directionSet = directionSet.intersection(["N","E","S"])
+        # print("No west")
+      if (y + ship_length > 9):
+        directionSet = directionSet.intersection(["N","E","W"])
+        # print("No south")
+      if (y - ship_length < 0):
+        directionSet = directionSet.intersection(["W","E","S"])
+        # print("No North")
+      print("Mögliche Richtungen: {0}".format(directionSet))
 
-      print("No south")
-    if (y - ship_member < 0):
-      directionSet = directionSet.intersection(["W","E","S"])
-      print("No North")
-    print(directionSet)
+      # convert back to list for random choice method
+      direction = random.choice(list(directionSet))
+      new_battleship = Battleship.build((x,y), ship_length, direction)
+      print("Neues Battleship: {0}".format(new_battleship.body))
 
-    # convert back to list for random choice method
-    direction = random.choice(list(directionSet))
-    new_battleship = Battleship.build((x,y), ship_member, direction)
-    random_battleships.append(new_battleship)
-    if i == 1 and not first_three_long_ship:
-      first_three_long_ship = True
-    else:
-      ship_member += 1
-
-    print(random_battleships[i].body)
+      if not is_collision_with_battleship(random_battleships, new_battleship):
+        random_battleships.append(new_battleship)
+        # Weil es zwei Schiffe mit einer Länge von 3 gibt
+        if ship_length == 3 and not first_three_long_ship:
+          first_three_long_ship = True
+        else:
+          ship_length += 1
+        prevBattleships.append(coords)
+      else:
+        print("Neuer Versuch")
+  for r in random_battleships:
+    print("Alle Schiffe: %s" %r.body)
   return random_battleships
     
-
-
-
-
 
 def run():
 
   battleships = [
     Battleship.build((1,0), 3, "S"),
     Battleship.build((3,4), 4, "N")
-    # Battleship.build((5,7), 3, "E")
   ]
 
   game_boards = [
@@ -165,12 +275,10 @@ def run():
     # print("%s Yoour Turn!" % offensive_player.name)
     announce("new_turn", {"player": offensive_player.name})
 
-
     shot_location = offensive_player.shot_function(defensive_board)
     # ToDo: Bad user input
 
     hit_battleship = defensive_board.take_shot(shot_location)
-
 
     render(defensive_board, True)
 
@@ -190,5 +298,4 @@ def run():
 
 
 if __name__=="__main__":
-  run()
-
+  create_own_battleships()
