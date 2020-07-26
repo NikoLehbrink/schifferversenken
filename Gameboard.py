@@ -17,7 +17,7 @@ class Gameboard(object):
           is_hit = True
           b.hits[index] = True
           hit_battleship = b
-          # Breakt raus, weil wir wissne welches Schiff getroffen wurde
+          # Breakt raus, weil wir wissen welches Schiff getroffen wurde
           break
     
     self.shots.append(Shot(shot_location, is_hit))

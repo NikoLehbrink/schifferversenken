@@ -17,7 +17,7 @@ def render(game_board, show_battleships=False):
   if(show_battleships):
     # add the battleships to the board
     for b in game_board.battleships:
-      # Durch enmuerate macht man counter variable und wenn anfang oder ende des schiffes → mach andere zeichen
+      # Durch enmuerate macht man names_counter variable und wenn anfang oder ende des schiffes → mach andere zeichen
       for i,(x,y) in enumerate(b.body):
         if b.direction == "N":
           characters = ("v", "|", "^")
@@ -50,19 +50,17 @@ def render(game_board, show_battleships=False):
     for x in range(game_board.width):
       row.append(board[x][y] or " ")
     print("|" + "".join(row) + "|")
-
   print(field_border_top_bottom)
 
-# event is type, metadata(player,...)
 def announce(event_type, metadata={}):
   if event_type == "win":
     print("%s gewinnt! Glückwunsch! " % metadata["player"])
   elif event_type == "new_turn":
     print("%s ist am Zug!" % metadata["player"])
   elif event_type == "hit":
-    print("Wow, %s hat ein Schiff getroffen!" % metadata["player"])
+    print("Wow, {0} hat das Schiff {1} getroffen!".format(metadata["player"], metadata["ship_name"]))
   elif event_type == "destroyed":
-    print("BOOOM, %s hat das Schiff versenkt!" % metadata["player"])
+    print("Booom, {0} hat das Schiff {1} versenkt!".format(metadata["player"], metadata["ship_name"]))
   elif event_type == "miss":
     print("Leider nicht getroffen, %s!" % metadata["player"])
   elif event_type == "wrong_number":
@@ -70,13 +68,17 @@ def announce(event_type, metadata={}):
   elif event_type == "wrong_direction":
     print("Invalide Himmelsrichtung!")
   elif event_type == "ship_already_exists":
-    print("An dieser Stelle gibt es schon ein Schiff.")
+    print("An dieser Stelle gibt es schon ein Schiff!")
     print("Platziere das Schiff erneut!")
   elif event_type == "out_of_border":
-    print("Außerhalb des Wassers dürfen keine Schiffe platziert werden.")
+    print("Außerhalb des Wassers dürfen keine Schiffe platziert werden!")
     print("Richtung: %s" % metadata["direction"])
   elif event_type == "collision":
-    print("Kollision von {0} mit {1}.".format(metadata["coordinates"], metadata["already_build_battleships"]))
+    print("Kollision von {0} mit {1}!".format(metadata["coordinates"], metadata["already_build_battleships"]))
+  elif event_type == "ship_placed":
+    print("{0} wurde erfolgreich platziert! Koordinaten: {1}".format(metadata["ship_name"], metadata["coordinates"]))
+  elif event_type == "invalid_name":
+    print("Bitte gib einen Namen ein, der aus Buchstaben besteht!")
 
 def get_random_ai_shot(game_board):
   x = random.randint(0, game_board.width - 1 )
@@ -99,8 +101,6 @@ def get_human_shot(game_board):
 def is_collision_with_battleship(random_battleships, new_battleship):
   for already_build_battleship in random_battleships:
     for coordinates in already_build_battleship.body:
-      # print("Koordinaten: %s" %coordinates)
-      # print("Neues Schiff: %s" %new_battleship.body)
       if coordinates in new_battleship.body:
         announce("collision", {"coordinates": coordinates,"already_build_battleships": already_build_battleship.body})
         return True
@@ -109,21 +109,17 @@ def is_collision_with_battleship(random_battleships, new_battleship):
 def is_collision_with_coordinates(random_battleships, coords):
   for already_build_battleship in random_battleships:
     for coordinates in already_build_battleship.body:
-      print("Koordinaten: {0}".format(coordinates))
-      print("Neues Schiff: {0}".format(coords))
       if coordinates == coords:
         announce("collision", {"coordinates": coords,"already_build_battleships": already_build_battleship.body})
         return True
   return False
 
-
-
-
 def create_own_battleships():
   ship_length = 2
-  first_three_long_ship = False
+  first_ship_with_length_three = False
   battleships = []
-  prevBattleships = []
+  names = ["Destroyer", "Submarine", "Cruiser", "Battleship", "Carrier"]
+  name_counter = 0
   directionList = ['N','E','S','W']
 
   while(ship_length <= 5):
@@ -153,41 +149,37 @@ def create_own_battleships():
         announce("wrong_direction")
         continue
 
-      if not is_collision_with_coordinates(battleships, coords):
-        print("hallo")
-        if (x + ship_length - 1 > 9 and direction == 'E'):
-          announce("out_of_border", {"direction": direction})
-          continue
-        if (x - ship_length + 1 < 0 and direction == 'W'):
-          print(x - ship_length)
-          announce("out_of_border", {"direction": direction})
-          continue
-        if (y + ship_length - 1 > 9 and direction == 'S'):
-          announce("out_of_border", {"direction": direction})
-          continue
-        if (y - ship_length + 1 < 0 and direction == 'N'):
-          announce("out_of_border", {"direction": direction})
-          continue
+      if (x + ship_length - 1 > 9 and direction == 'E'):
+        announce("out_of_border", {"direction": direction})
+        continue
+      if (x - ship_length + 1 < 0 and direction == 'W'):
+        announce("out_of_border", {"direction": direction})
+        continue
+      if (y + ship_length - 1 > 9 and direction == 'S'):
+        announce("out_of_border", {"direction": direction})
+        continue
+      if (y - ship_length + 1 < 0 and direction == 'N'):
+        announce("out_of_border", {"direction": direction})
+        continue
 
-        new_battleship = Battleship.build((x,y), ship_length, direction)
+      new_battleship = Battleship.build((x,y), ship_length, direction, names[name_counter])
 
-        if is_collision_with_battleship(battleships, new_battleship):
-          announce("ship_already_exists")
-          break
-        else:
-          battleships.append(new_battleship)
-
-        if ship_length == 3 and not first_three_long_ship:
-          first_three_long_ship = True
-        else:
-          ship_length += 1
+      if is_collision_with_battleship(battleships, new_battleship):
+        announce("ship_already_exists")
         break
       else:
-        print("Neuer Versuch")
-        break
+        battleships.append(new_battleship)
+        announce("ship_placed", {"ship_name": new_battleship.name, "coordinates": new_battleship.body})
+
+      if ship_length == 3 and not first_ship_with_length_three:
+        first_ship_with_length_three = True
+      else:
+        ship_length += 1
+      name_counter += 1 
+      break
     
-    for r in battleships:
-      print("Alle Schiffe: %s" %r.body)
+    # for r in battleships:
+    #   print("Alle Schiffe: %s" %r.body)
 
   return battleships
   
@@ -195,74 +187,101 @@ def create_own_battleships():
 
 def create_random_battleships():
   ship_length = 2
-  first_three_long_ship = False
+  first_ship_with_length_three = False
   random_battleships = []
-  prevBattleships = []
+  names = ["Destroyer", "Submarine", "Cruiser", "Battleship", "Carrier"]
+  names_counter = 0
 
   while(ship_length <= 5):
     directionList = ["N","E","S","W"]
     # convert to set for intersection method
     directionSet = set(directionList)
-
     x = random.randint(0, 9)
     y = random.randint(0, 9)
     coords = (x,y)
-    print("x = {0}, y = {1}".format(x,y))
+
+    # print("x = {0}, y = {1}".format(x,y))
 
     if not is_collision_with_coordinates(random_battleships, coords):
-      print("{0} nocht nicht vorhanden!".format(coords))
-      print("Vorherige Schiffe: {0}".format(prevBattleships))
 
-      if (x + ship_length > 9):
+      if (x + ship_length - 1 > 9):
         directionSet = directionSet.intersection(["N","S","W"])
-        # print("No east")
-      if (x - ship_length < 0):
+      if (x - ship_length + 1 < 0):
         directionSet = directionSet.intersection(["N","E","S"])
-        # print("No west")
-      if (y + ship_length > 9):
+      if (y + ship_length - 1 > 9):
         directionSet = directionSet.intersection(["N","E","W"])
-        # print("No south")
-      if (y - ship_length < 0):
+      if (y - ship_length + 1 < 0):
         directionSet = directionSet.intersection(["W","E","S"])
-        # print("No North")
-      print("Mögliche Richtungen: {0}".format(directionSet))
+      # print("Mögliche Richtungen: {0}".format(directionSet))
 
       # convert back to list for random choice method
       direction = random.choice(list(directionSet))
-      new_battleship = Battleship.build((x,y), ship_length, direction)
-      print("Neues Battleship: {0}".format(new_battleship.body))
+      new_battleship = Battleship.build((x,y), ship_length, direction, names[names_counter])
 
       if not is_collision_with_battleship(random_battleships, new_battleship):
         random_battleships.append(new_battleship)
+        announce("ship_placed", {"ship_name": new_battleship.name, "coordinates": new_battleship.body})
+
         # Weil es zwei Schiffe mit einer Länge von 3 gibt
-        if ship_length == 3 and not first_three_long_ship:
-          first_three_long_ship = True
+        if ship_length == 3 and not first_ship_with_length_three:
+          first_ship_with_length_three = True
         else:
           ship_length += 1
-        prevBattleships.append(coords)
+        names_counter += 1
       else:
-        print("Neuer Versuch")
-  for r in random_battleships:
-    print("Alle Schiffe: %s" %r.body)
+        del(new_battleship)
+      
+  # for r in random_battleships:
+  #   print("%s ist auf %s positioniert!" %(r.name, r.body))
+      
   return random_battleships
     
 
 def run():
+  players = []
+  game_boards = []
 
-  battleships = [
-    Battleship.build((1,0), 3, "S"),
-    Battleship.build((3,4), 4, "N")
-  ]
+  for i in range(1,3):
+    while(True):
+      name = input("Spieler %s: Bitte Namen eingeben: " %i)
+      if not "".join(name.split()).isalpha():
+        announce("invalid_name")
+        continue
+      break
+    while(True):
+      print("Welcher Spielertyp soll %s sein?" %name)
+      player_type = input("'C' für Computer generiert, 'M' für Mensch: ").lower()
+      if player_type == 'c':
+        player = Player(name, random_sleepy_ai(1))
+        gameboard = Gameboard(10,10,create_random_battleships())  
+        players.append(player)
+        game_boards.append(gameboard)
+        break
+      elif player_type == 'm':
+        player = Player(name, get_human_shot)
+        gameboard = Gameboard(10,10,create_own_battleships())  
+        players.append(player)
+        game_boards.append(gameboard)
+        break
+      else:
+        print("gib richtige string ein")
+        continue
+  
 
-  game_boards = [
-    Gameboard(10,10,create_random_battleships()),  
-    Gameboard(10,10,copy.deepcopy(battleships))  
-  ]
 
-  players = [
-    Player("Rob", random_sleepy_ai(2.5)),
-    Player("Niko", random_sleepy_ai(2.5))
-  ]
+
+      
+
+
+  # game_boards = [
+  #   Gameboard(10,10,create_random_battleships()),  
+  #   Gameboard(10,10,create_own_battleships())  
+  # ]
+
+  # players = [
+  #   Player("Rob", get_human_shot),
+  #   Player("Niko", random_sleepy_ai(2.5))
+  # ]
   offensive_index = 0
 
   while(True):
@@ -291,11 +310,12 @@ def run():
       announce("miss", {"player": offensive_player.name})
       offensive_index = defensive_index
     else:
+      print(hit_battleship.name)
       if hit_battleship.is_destroyed():
-        announce("destroyed", {"player": offensive_player.name})
+        announce("destroyed", {"player": offensive_player.name, "ship_name": hit_battleship.name})
       else:
-        announce("hit", {"player": offensive_player.name})
+        announce("hit", {"player": offensive_player.name, "ship_name": hit_battleship.name})
 
 
 if __name__=="__main__":
-  create_own_battleships()
+  run()
