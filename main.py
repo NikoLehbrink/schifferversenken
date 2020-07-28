@@ -7,8 +7,7 @@ from Player import Player
 
 
 def render(game_board, show_battleships=False):
-  field_border_top_bottom = "+" + "-" * game_board.width + "+"
-  print(field_border_top_bottom)
+
 
   board = []
   for x in range(game_board.width):
@@ -20,13 +19,13 @@ def render(game_board, show_battleships=False):
       # Durch enmuerate macht man names_counter variable und wenn anfang oder ende des schiffes → mach andere zeichen
       for i,(x,y) in enumerate(b.body):
         if b.direction == "N":
-          characters = ("v", "|", "^")
+          characters = (" v", " +", " ^")
         if b.direction == "S":
-          characters = ("^", "|", "v")
+          characters = (" ^", " +", " v")
         if b.direction == "E":
-          characters = ("<", "-", ">")
+          characters = (" <", " +", " >")
         if b.direction == "W":
-          characters = (">", "-", "<")
+          characters = (" >", " +", " <")
 
         if i == 0:
           character= characters[0]
@@ -40,17 +39,19 @@ def render(game_board, show_battleships=False):
   for sh in game_board.shots:
     x, y = sh.location
     if sh.is_hit:
-      character = "X"
+      character = " X"
     else:
-      character = "."
+      character = " »"
     board[x][y] = character
+  
+  field_border_top_bottom = "  0 1 2 3 4 5 6 7 8 9" 
+  print(field_border_top_bottom)
 
   for y in range(game_board.height):
     row = []
     for x in range(game_board.width):
-      row.append(board[x][y] or " ")
-    print("|" + "".join(row) + "|")
-  print(field_border_top_bottom)
+      row.append(board[x][y] or " O")
+    print(str(y) + "".join(row) )
 
 def announce(event_type, metadata={}):
   if event_type == "win":
@@ -267,21 +268,6 @@ def run():
         print("gib richtige string ein")
         continue
   
-
-
-
-      
-
-
-  # game_boards = [
-  #   Gameboard(10,10,create_random_battleships()),  
-  #   Gameboard(10,10,create_own_battleships())  
-  # ]
-
-  # players = [
-  #   Player("Rob", get_human_shot),
-  #   Player("Niko", random_sleepy_ai(2.5))
-  # ]
   offensive_index = 0
 
   while(True):
@@ -299,7 +285,7 @@ def run():
 
     hit_battleship = defensive_board.take_shot(shot_location)
 
-    render(defensive_board, True)
+    render(defensive_board, False)
 
     if defensive_board.is_game_over():
       announce("win", {"player": offensive_player.name})
