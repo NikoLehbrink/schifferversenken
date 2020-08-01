@@ -6,20 +6,19 @@ class Gameboard(object):
     self.height = height
     self.battleships = battleships
     self.shots = []
-# Todo: update battleship with any hits
-# Todo: save the fact that the shot was a hit or a miss
+
   def take_shot(self, shot_location):
     hit_battleship = None
     is_hit = False
     for b in self.battleships:
+        # Wir müssen nicht nur wissen, ob das Schiff getroffen wurde, sondern auch wo, damit Schuss für die nächsten Spielzüge "gespeichert" werden kann
         index = b.body_index(shot_location)
         if index is not None:
           is_hit = True
           b.hits[index] = True
           hit_battleship = b
-          # Breakt raus, weil wir wissen welches Schiff getroffen wurde
+          # Breakt raus, weil wir wissen, welches Schiff getroffen wurde und nur eins zur Zeit getroffen werden kann
           break
-    
     self.shots.append(Shot(shot_location, is_hit))
     return hit_battleship
 
