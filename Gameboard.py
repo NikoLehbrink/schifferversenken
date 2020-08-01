@@ -1,3 +1,4 @@
+# Niko Lehbrink, HSB, Python 3-Kurs, Endabgabe
 from Shot import Shot
 
 class Gameboard(object):

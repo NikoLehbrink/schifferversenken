@@ -1,11 +1,12 @@
-import copy
+# Niko Lehbrink, HSB, Python 3-Kurs, Endabgabe
 import random
 import time
+import os
+from colorama import init, Fore, Back, Style
+
 from Battleship import Battleship
 from Gameboard import Gameboard
 from Player import Player
-from colorama import init, Fore, Back, Style
-import os
 
 # Initialisierung für Colorama, damit Terminal-Zeilen farbig ausgegeben werden können. 
 init()
@@ -96,6 +97,9 @@ def announce(event_type, metadata={}):
     print(Fore.LIGHTYELLOW_EX + "Du darfst nochmal schiessen" + Style.RESET_ALL)
   elif event_type == "shot_location":
     print("Schuss auf {0}".format(metadata["coordinates"]))
+  elif event_type == "no_valid_input":
+    print(Fore.RED + "Gib eine valide Eingabe ein!" + Style.RESET_ALL)
+
 
 
 # Funktion für zufälligen Schuss,der vom Computer ausgefhürt wird.
@@ -134,16 +138,18 @@ def is_collision_with_coordinates(random_battleships, coords):
   for already_build_battleship in random_battleships:
     for coordinates in already_build_battleship.body:
       if coordinates == coords:
-        announce("collision", {"coordinates": coords,"already_build_battleships": already_build_battleship.name})
+        # debugging-ausgabe, mit welchem Schiff kollidiert wird
+        # announce("collision", {"coordinates": coords,"already_build_battleships": already_build_battleship.name})
         return True
   return False
 
-# Funktion: Wenn die Head-Koordinate nicht mit einem anderem Schiff kollidiert, aber der daraufhin berechnete Rumpf mit einem vorhandenen Schiff kollidiert
+# Funktion: Wenn die Head-Koordinate nicht mit einem anderem Schiff kollidiert, aber der daraufhin berechnete Rumpf des neuen Schiffs mit einem vorhandenen Schiff kollidiert
 def is_collision_with_battleship(random_battleships, new_battleship):
   for already_build_battleship in random_battleships:
     for coordinates in already_build_battleship.body:
       if coordinates in new_battleship.body:
-        announce("collision", {"coordinates": coordinates,"already_build_battleships": already_build_battleship.name})
+        # debugging-ausgabe, mit welchem Schiff kollidiert wird
+        # announce("collision", {"coordinates": coordinates,"already_build_battleships": already_build_battleship.name})
         return True
   return False
 
@@ -274,7 +280,7 @@ def run():
   print("""
   Willkommen zu Niko Lehbrink's Schiffe Versenken!
   Nachdem du deinen Spielern Namen gegeben hast, 
-  kannst du auswählen, ob dieser computergeneriert wird,
+  kannst du auswählen, ob dieser Computergeneriert wird,
   oder ob eine reale Person dahinter steckt...
 
   Die Regeln: 
@@ -308,7 +314,7 @@ def run():
       break
     while(True):
       print("Welcher Spielertyp soll %s sein?" %name)
-      player_type = input("'C' für Computer generiert, 'M' für Mensch: ").lower()
+      player_type = input("'C' für Computergeneriert, 'M' für Mensch: ").lower()
       if player_type == 'c':
         player = Player(name, get_random_ai_shot)
         gameboard = Gameboard(10,10,create_random_battleships())  
@@ -321,16 +327,16 @@ def run():
         # Bei einmaligen Ausgaben und input-Methoden wurde auf die Benutzung der announce-Methode verzichtet
         print("Möchtest du deine Schiffe selbst platzieren?")
         while(True):
-          create_ships = input("'J' für selbst generieren, 'N' für Computer generiert: ").lower()
+          create_ships = input("'J' für selbst generieren, 'N' für Computergeneriert: ").lower()
           if create_ships == 'j':
             gameboard = Gameboard(10,10,create_own_battleships())
             break
           elif create_ships == 'n':
             gameboard = Gameboard(10,10,create_random_battleships())
-            time.sleep(4)
+            time.sleep(3)
             break
           else:
-            print(Fore.RED + "Gib eine valide Eingabe ein!" + Style.RESET_ALL)
+            announce("no_valid_input")
             continue
         players.append(player)
         game_boards.append(gameboard)
@@ -340,7 +346,15 @@ def run():
         continue
   
   offensive_index = 0
-
+  time_in_between_turns = 4
+  while(True):
+    print(Fore.LIGHTYELLOW_EX + "Wie viele Sekunden sollen zwischen den einzelnen Spielzügen gewartet werden?" + Style.RESET_ALL )
+    try:
+      time_in_between_turns = float(input("Eingabe erfolgt als Zahl (Empf.: 4): "))
+    except ValueError:
+      announce("no_valid_input")
+      continue
+    break
   while(True):
     # Clear Terminal
     os.system('cls')
@@ -390,8 +404,8 @@ def run():
         # Wenn ein Hit, aber nicht zerstört
         announce("hit", {"player": offensive_player.name, "ship_name": hit_battleship.name})
       announce("next_try")
-    # Zeit zwischen einzelnen Spielzügen
-    time.sleep(4)
+    # Zeit zwischen den einzelnen Spielzügen
+    time.sleep(time_in_between_turns)
 
 if __name__=="__main__":
   run()

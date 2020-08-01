@@ -1,3 +1,4 @@
+# Niko Lehbrink, HSB, Python 3-Kurs, Endabgabe
 class Battleship(object):
 
   @staticmethod
